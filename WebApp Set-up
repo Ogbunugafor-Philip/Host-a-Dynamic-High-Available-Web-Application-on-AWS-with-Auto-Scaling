@@ -1,0 +1,113 @@
+
+# RentZone Web Application Setup on EC2
+
+This guide walks you through the process of setting up a web application (RentZone) on an EC2 instance with Apache, PHP, MySQL, and necessary configurations.
+
+## Prerequisites
+
+- An AWS EC2 instance (Amazon Linux 2)
+- Access to the instance with `sudo` privileges
+- AWS CLI installed and configured
+- S3 bucket with the RentZone web app zip file
+
+## Step-by-Step Instructions
+
+### 1. Update EC2 Instance
+Start by updating your EC2 instance to ensure that all packages are up to date:
+```bash
+sudo yum update -y
+```
+
+### 2. Install Apache Web Server
+Install Apache HTTP server:
+```bash
+sudo yum install -y httpd
+```
+Enable Apache to start on boot and start the service:
+```bash
+sudo systemctl enable httpd
+sudo systemctl start httpd
+```
+
+### 3. Install PHP 7.4
+Enable PHP 7.4 on Amazon Linux and install the necessary PHP packages:
+```bash
+sudo amazon-linux-extras enable php7.4
+sudo yum clean metadata
+sudo yum install php php-common php-pear -y
+sudo yum install php-{cgi,curl,mbstring,gd,mysqlnd,gettext,json,xml,fpm,intl,zip} -y
+```
+
+### 4. Install MySQL 5.7
+Download and install MySQL 5.7 community edition:
+```bash
+sudo rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+sudo yum install mysql-community-server -y
+```
+Enable and start the MySQL service:
+```bash
+sudo systemctl enable mysqld
+sudo systemctl start mysqld
+```
+
+### 5. Download RentZone Web App from S3
+Use the AWS CLI to sync the RentZone web app from an S3 bucket to your EC2 instance:
+```bash
+sudo aws s3 sync s3://philip-rentzone-webapp /var/www/html
+```
+
+### 6. Unzip RentZone Web App
+Navigate to the web directory and unzip the RentZone zip file:
+```bash
+cd /var/www/html
+sudo unzip rentzone.zip
+```
+
+### 7. Move Files and Folders to the HTML Directory
+Move the contents of the `rentzone` folder to the Apache HTML directory:
+```bash
+sudo mv rentzone/* /var/www/html
+```
+
+Move any hidden files to the HTML directory:
+```bash
+sudo mv rentzone/.well-known /var/www/html
+sudo mv rentzone/.env /var/www/html
+sudo mv rentzone/.htaccess /var/www/html
+```
+
+### 8. Clean Up
+Remove the `rentzone` folder and zip file:
+```bash
+sudo rm -rf rentzone rentzone.zip
+```
+
+### 9. Enable Mod_Rewrite for Apache
+Enable `mod_rewrite` for Apache by modifying the configuration file:
+```bash
+sudo sed -i '/<Directory "\/var\/www\/html">/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/httpd/conf/httpd.conf
+```
+
+### 10. Set Permissions
+Set the correct file permissions for the web app:
+```bash
+sudo chmod -R 777 /var/www/html
+sudo chmod -R 777 storage/
+```
+
+### 11. Add Database Credentials
+Edit the `.env` file to add your database credentials:
+```bash
+sudo vi .env
+```
+
+### 12. Restart Apache Server
+Finally, restart the Apache service to apply all changes:
+```bash
+sudo service httpd restart
+```
+
+## Conclusion
+
+Your RentZone web application should now be up and running on your EC2 instance with Apache, PHP, and MySQL configured. You can access the application through your EC2 public IP or domain name.
