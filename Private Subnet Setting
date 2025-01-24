@@ -1,0 +1,105 @@
+This file is structured to guide users through the process of setting up a Bastion host, SSH into an EC2 instance, and configuring the web app.
+
+markdown
+Copy
+Edit
+# Web App Configuration and Bastion Host Setup
+
+## Overview
+
+This guide will walk you through the steps to SSH into an EC2 instance in a private subnet to update your web app configuration. This is essential after uploading an SSL certificate to secure your website, as the CSS may not display properly. We'll use a Bastion host in the public subnet to securely access the EC2 instance in the private subnet.
+
+## Steps
+
+### Step 1: Launch a Bastion Host in the Public Subnet
+
+A Bastion host is a secure server used to provide controlled access to a private network, serving as a jump box for administrators to connect to resources in a restricted environment.
+
+1. In the **AWS Management Console**, go to **EC2**.
+2. Click **Launch Instance**.
+3. Fill out the instance setup details:
+   - **Name**: Bastion Host
+   - **Application and OS Image**: Amazon Linux 2 AMI
+   - **Instance Type**: t2.micro
+   - **Key Pair**: Select the key pair you created earlier.
+   - **Network Settings**:
+     - **VPC**: Select your created VPC.
+     - **Subnet**: Select **Public Subnet AZ 1**.
+     - **Security Group**: Select the existing **SSH security group**.
+4. Click **Launch Instance**.
+
+### Step 2: SSH into the Bastion Host
+
+You will now SSH into the Bastion host from your local machine.
+
+1. Open **PowerShell** as an administrator.
+2. Run the following command to confirm that the SSH agent is running:
+   ```bash
+   Get-Service ssh-agent
+If the service is not running, start it with:
+bash
+Copy
+Edit
+Start-Service ssh-agent
+Add your SSH key to the agent:
+bash
+Copy
+Edit
+ssh-add C:\WINDOWS\system32\ec2-keypair.pem
+Go to your EC2 instance page and select the Bastion Host instance.
+At the top, click Connect and choose SSH Client. Copy the connection example:
+bash
+Copy
+Edit
+ssh -i "ec2-keypair.pem" ec2-user@ec2-54-81-86-144.compute-1.amazonaws.com
+Paste the command into your PowerShell and press Enter. You should now be connected to your Bastion Host.
+Step 3: SSH into the Private Web Server
+From the Bastion Host, you will now SSH into the EC2 instance in the private subnet.
+
+Go to your web server and copy the private IP address.
+Run the following command to SSH into the private EC2 instance:
+bash
+Copy
+Edit
+ssh -i "ec2-keypair.pem" ec2-user@10.0.2.122
+You should now be connected to your private web server.
+Step 4: Update the Web App Configuration
+Change the directory to the web root:
+
+bash
+Copy
+Edit
+cd /var/www/html
+Edit the .env file:
+
+bash
+Copy
+Edit
+sudo vi .env
+Update APP_ENV to production.
+Update APP_URL to your domain name.
+Next, update the AppServiceProvider.php file:
+
+bash
+Copy
+Edit
+cd app/Providers
+sudo vi AppServiceProvider.php
+Add the following code under the public function boot:
+php
+Copy
+Edit
+if (env('APP_ENV') === 'production') {
+    \Illuminate\Support\Facades\URL::forceScheme('https');
+}
+Restart Apache to apply the changes:
+
+bash
+Copy
+Edit
+sudo service httpd restart
+Step 5: Verify the Website
+After completing these steps, your website should now display correctly and be secured with HTTPS.
+
+Conclusion
+Following these steps ensures that your web app is configured correctly and securely using a Bastion host to access your private EC2 instance. Don't miss any of the steps, as they are crucial for ensuring that your site functions properly and is secure.
